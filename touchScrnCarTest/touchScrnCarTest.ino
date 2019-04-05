@@ -32,7 +32,7 @@
 
 #define CRPM                 30      // for carriage motor speed
 #define DELAYMILLI           250     // set millisecond delay (used for torque and carriage)
-
+#define GOTIME               10      // time to keep carriage motor on
 #define FRAME_X              210
 #define FRAME_Y              180
 #define FRAME_W              100
@@ -120,7 +120,7 @@ void startCarriageMotor()
 {
    Serial.println("\n\n\n");
    Serial.println("motor  turning is on...");
-   for(int i = 0; i < 5; i++)
+   for(int i = 0; i < GOTIME; i++)
    {
        Serial.println("\n\n\n");
        Serial.println("motor still is on...");
