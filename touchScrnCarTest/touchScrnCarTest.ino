@@ -30,9 +30,9 @@
 #define MINPRESSURE 10
 #define MAXPRESSURE 1000
 
-#define CRPM                 30      // for carriage motor speed
+#define CRPM                 50      // for carriage motor speed
 #define DELAYMILLI           250     // set millisecond delay (used for torque and carriage)
-#define GOTIME               10      // time to keep carriage motor on
+#define GOTIME               5      // time to keep carriage motor on
 #define FRAME_X              210
 #define FRAME_Y              180
 #define FRAME_W              100
