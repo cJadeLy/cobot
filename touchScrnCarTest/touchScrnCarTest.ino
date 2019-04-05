@@ -104,6 +104,8 @@ void greenBtn()
 
 void setup(void)
 {
+  
+  TCCR2B = TCCR2B & 0b11111000 | 0x01;
   Serial.begin(9600);
   tft.begin();
 
