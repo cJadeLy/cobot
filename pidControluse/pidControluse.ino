@@ -78,34 +78,10 @@ CytronMD carriageMotor(PWM_DIR, 9, 10);  // PWM = Pin 9, DIR = Pin 10.
 // Create Instance of Stepper library
 Stepper myStepper(stepsPerRevolution, 35, 37, 39, 41);
 
-void articulationSystemForward()
-{
-  
-  myStepper.setSpeed(SRPM);
-  Serial.println("Articulation System Activated yeeaaaaaa");
-  for(int i = 0; i < REVOLUTIONS; i++)
-  {
-  
-    myStepper.step(stepsPerRevolution);
-    delayMicroseconds(DELAYMCRO);
-  }
-
-activateTorqueMotor();
-}
-void articulationSystemBackward()
-{
-  Serial.println("/n Articulation System Activated /n");
-  
-  myStepper.setSpeed(SRPM);
-  for(int i = 0; i < REVOLUTIONS; i++)
-  {
-          myStepper.step(-stepsPerRevolution);
-          delayMicroseconds(DELAYMCRO);
-
-  }
-startCarriageMotor();
-
-}
+// This is the first function call when COBOT begins. Since we align to the first bolt we begin already
+// ready to tighten this one. Torque is currently NOT using data needed to apply torque in stages
+// This amount of time is currently constant. In the future we will be using PID and input data from the 
+// op-amp to determine the proper level of torque to apply.
 void activateTorqueMotor()
 {
     Serial.println("\n\n\n");
@@ -125,16 +101,56 @@ void activateTorqueMotor()
     keepLooking = true;
  articulationSystemBackward();
 }
+
+// After torquing a bolt, we move away from the bolt
+void articulationSystemBackward()
+{
+  Serial.println("/n Articulation System Activated /n");
+  
+  myStepper.setSpeed(SRPM);
+  for(int i = 0; i < REVOLUTIONS; i++)
+  {
+          myStepper.step(-stepsPerRevolution);
+          delayMicroseconds(DELAYMCRO);
+
+  }
+startCarriageMotor();
+
+}
+// Now we are ready to go to the next bolt
 void startCarriageMotor()
- {
+{
   Serial.println("\n\n\n");
   Serial.println("About to go look for location of next bolt...");
   
-  carriageMotor.setSpeed(CRPM);
-  delay(DELAYMILLI);
-  Serial.println("Leaving.");
+//  carriageMotor.setSpeed(CRPM);
+//  delay(DELAYMILLI);
+//  Serial.println("Leaving.");
+
+// Commented out above and replaced with this so that PID always takes care of
+// starting the motor. When keepLooking is true PID has full control. Otherwise it means
+// we have already found a bolt and the COBOT is busy moving towards it, tightening it,
+// or moving away from it (COBOT is busy - should not be searching)
   keepLooking = true;
- }
+
+}
+// When we find a bolt to tighten we will call this function to move forward to
+// bring the socket to the bolt, then call activateTorqueMotor to tighten it
+void articulationSystemForward()
+{
+  
+  myStepper.setSpeed(SRPM);
+  Serial.println("Articulation System Activated yeeaaaaaa");
+  for(int i = 0; i < REVOLUTIONS; i++)
+  {
+  
+    myStepper.step(stepsPerRevolution);
+    delayMicroseconds(DELAYMCRO);
+  }
+
+activateTorqueMotor();
+}
+
 void setup() {
   TCCR2B = TCCR2B & 0b11111000 | 0x01;  // set 31KHz PWM to prevent motor noise
 // dont remember why I commented this out. will look into later
