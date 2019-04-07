@@ -11,10 +11,10 @@
 #include "CytronMotorDriver.h"
 
 //pin definition
-#define XP        43
-#define XN        A2
-#define YN        47
-#define YP        A3
+#define XP        43  // x+
+#define XN        A2 //x-
+#define YN        47 // y-
+#define YP        A3 //y+
 #define DC        46
 #define MISO      50
 #define MOSI      51
