@@ -10,8 +10,11 @@
 #include <Stepper.h>
 
 
-#define MotEnable 9 //Motor Enamble pin Runs on PWM signal
-#define MotDir  10  // Motor Direction pin
+#define CarPWM  9 // Carriage motor PWM signal must be on timer 2 for 31250 hz to reduce motor noise (otherwise motor will be loud and HOTTT)
+#define CarMotDir  6  // Torque motor Direction pin
+
+#define TorqPWM 10 //Motor PWM signal must be on timer 2 for 31250 hz to reduce motor noise (otherwise motor will be loud and HOTTT)
+#define TorqMotDir  7  // Motor Direction pin
 
 #define ENCODER0PINA         20      // this pin needs to support interrupts
 #define ENCODER0PINB         17      
@@ -71,9 +74,9 @@ PID myPID(&input, &output, &setpoint, kp, ki, kd, DIRECT);
 
 // Configure the motor driver.
 // Create Instance of CytronMD library for torque motor
-CytronMD torqueMotor(PWM_DIR, 6, 7);  // PWM = Pin 6, DIR = Pin 7.
+CytronMD torqueMotor(PWM_DIR, TorqPWM, TorqMotDir);  // PWM = Pin 6, DIR = Pin 7.
 // Create Instance of CytronMD library for carriage motor
-CytronMD carriageMotor(PWM_DIR, 9, 10);  // PWM = Pin 9, DIR = Pin 10.
+CytronMD carriageMotor(PWM_DIR, CarPWM, CarMotDir);  // PWM = Pin 9, DIR = Pin 10.
 
 // Create Instance of Stepper library
 Stepper myStepper(stepsPerRevolution, 35, 37, 39, 41);
@@ -157,14 +160,14 @@ void setup() {
 //  pinMode(ENCODER0PINA, INPUT);
 //  pinMode(ENCODER0PINB, INPUT);
 
-  pinMode(6, OUTPUT);
-  pinMode(7, OUTPUT);
+  pinMode(TorqPWM, OUTPUT);
+  pinMode(TorqMotDir, OUTPUT);
   pinMode(35, OUTPUT);
   pinMode(37, OUTPUT);
   pinMode(39, OUTPUT);
   pinMode(41, OUTPUT);
-  pinMode(MotEnable, OUTPUT);
-  pinMode(MotDir, OUTPUT); 
+  pinMode(CarPWM, OUTPUT);
+  pinMode(CarMotDir, OUTPUT); 
 
   Serial.begin(9600); //initialize serial communication to enable diagnostic output
 
@@ -274,14 +277,14 @@ void pwmOut(int out)
   { 
     Serial.println("setting motor speed to: ");
     Serial.println(out);   
-    analogWrite(MotEnable, out);         // Enabling motor enable pin to reach the desire angle
+    analogWrite(CarPWM, out);         // Enabling motor enable pin to reach the desire angle
     forward();                           // calling motor to move forward
   }
   else
   {
     Serial.println("setting motor speed to: ");
     Serial.println(out); 
-    analogWrite(MotEnable, abs(out));                        
+    analogWrite(CarPWM, abs(out));                        
     reverse();                            // calling motor to move reverse
   }
   
@@ -332,21 +335,19 @@ if(abs((map(encoder0Position, 0, 2000, 0, MAPval))) == positions[next])
 
 void forward ()
 {
-  digitalWrite(MotDir, HIGH); 
+  digitalWrite(CarMotDir, HIGH); 
   
 }
 
 void reverse ()
 {
-  digitalWrite(MotDir, LOW); 
+  digitalWrite(CarMotDir, LOW); 
  
   
 }
 // I dont even use this plus it doesn't do what I want it to. It stays for now
 void finish ()
 {
-  Serial.print("Stopping");
-  digitalWrite(MotDir, LOW); 
- digitalWrite(MotEnable, LOW); 
+// TODO: something when finished
   
 }
