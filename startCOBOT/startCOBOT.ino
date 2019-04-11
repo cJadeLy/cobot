@@ -7,16 +7,10 @@
 
 #include <PID_v1.h>
 #include "CytronMotorDriver.h"
-#include <Stepper.h>
 #include <Adafruit_GFX.h>
 #include <SPI.h>
 #include <Adafruit_ILI9341.h>
 #include <TouchScreen.h>
-
-
-#define MotEnable 9 //Motor Enamble pin Runs on PWM signal
-#define MotDir  6  // Motor Direction pin
-
 
 //Touchscreen X+ X- Y+ Y- pins
 #define YP A3  // must be an analog pin, use "An" notation!
@@ -29,31 +23,36 @@
 #define TS_MINY 120
 #define TS_MAXX 920
 #define TS_MAXY 940
-
+// min and max touch screen pressure to react to
 #define MINPRESSURE 10
 #define MAXPRESSURE 1000
 
 #define TFT_CS 53
 #define TFT_DC 46
 
-
+// frame coordinates and dimention for drawing rectangles on LCD for buttons
 #define FRAME_X 210
 #define FRAME_Y 180
 #define FRAME_W 100
 #define FRAME_H 50
 
+// Motor Pins
+#define STEPDIR              4       // Stepper Motor Direction pin
+#define STEPPWM              3       // Stepper Motor PWM signal
+#define CARPWM               9       // Carriage Motor PWM signal
+#define CARDIR               6       // Carriage Motor Direction pin
+#define TRQPWM               10      // Torque Motor PWM signal
+#define TRQDIR               7       // Torque Motor Direction pin
 
 
 #define ENCODER0PINA         20      // this pin needs to support interrupts
 #define ENCODER0PINB         17      // this pin does not need to support interrupts
 #define CLOCKWISE            1       // direction constant
 #define COUNTER_CLOCKWISE    2       // direction constant
-#define REVOLUTIONS          10      // 30 = a distance of 2 inches
 #define CRPM                 35      // for carriage motor speed
 #define TRPM                 30      // for torque motor speed
-#define SRPM                 200     // for stepper motor speed
 #define DELAYMILLI           250     // set millisecond delay (used for torque and carriage)
-#define DELAYMCRO            10      // set microsecond delay (used for stepper)
+#define DELAYMCRO            50      // set microsecond delay (used for stepper)
 #define MAPval               90      // forgiving precision for encoder that maps 0 - 2000 to 0 - MAPval
 #define CPR                  2000    // Encoder Cycles per revolution.
 #define STOP                 0       
@@ -74,7 +73,7 @@ int positions[8] = {bolt1,bolt2, bolt3, bolt4, bolt5, bolt6, bolt7, 0};
 
 // when all indices == 2 the COBOT has completed 3 passes. As of 4/04/19 this is unused but it shall be implemented in the next revision
 int pass[8] = {0, 0, 0, 0, 0, 0, 0, 1};
-
+int REVS = 1600;      
 // variables modified by interrupt handler must be declared as volatile
 volatile long encoder0Position = 0;
 volatile long interruptsReceived = 0;
@@ -91,7 +90,7 @@ bool notStarted    = true;
 short currentDirection = CLOCKWISE;
 
 // Number of steps per output rotation // TODO: should change to a #define and all caps. 
-const int stepsPerRevolution = 200;
+const int stepsPerRevolution = 1600;
 
 // PID //TODO: explain constants
 double kp = .5 , ki = 1 , kd = .5; //kd prev vals: 1; 0.01;  kp prev vals: = 5, 1 KP = 2 BADD (WHEN KI = 1 AND KD = .5)
@@ -116,8 +115,6 @@ CytronMD torqueMotor(PWM_DIR, 10, 7);  // PWM = Pin 10, DIR = Pin 7.
 // Create Instance of CytronMD library for carriage motor
 CytronMD carriageMotor(PWM_DIR, 9, 6);  // PWM = Pin 9, DIR = Pin 6.
 
-// Create Instance of Stepper library
-Stepper myStepper(stepsPerRevolution, 35, 37, 39, 41);
 // draw and color frame for button
 void drawFrame()
 {
@@ -128,31 +125,40 @@ tft.fillRect(60, 50, 200, 100, ILI9341_GREEN);
 void activateTorqueMotor()
 {
    tft.setCursor(15,7);
-   tft.fillScreen(ILI9341_BLUE);
+ 
 
    tft.println("Torque...");
    torqueMotor.setSpeed(TRPM);
    delay(1000);
    torqueMotor.setSpeed(STOP);
    delay(DELAYMILLI);
-   // keepLooking = true;
+   tft.fillScreen(ILI9341_BLUE);
+
  articulationSystemBackward();
 
 }
 void articulationSystemBackward()
 {
-  tft.setCursor(15,7);
-  tft.fillScreen(ILI9341_BLUE);
+   
   tft.println("Articulation System");
   tft.println("\n Moving Backwards");
   
-  myStepper.setSpeed(SRPM);
-  for(int i = 0; i < REVOLUTIONS; i++)
+  
+  digitalWrite(STEPDIR, HIGH); //Pull direction pin low to move "backward"
+  digitalWrite(35, HIGH); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
+  digitalWrite(37, HIGH);
+  for(int x = 0; x < REVS; x++)  //Loop the forward stepping enough times for motion to be visible
   {
-          myStepper.step(-stepsPerRevolution);
-          delayMicroseconds(DELAYMCRO);
-
+    digitalWrite(STEPPWM,HIGH); //Trigger one step forward
+    delay(1);
+    digitalWrite(STEPPWM,LOW); //Pull step pin low so it can be triggered again
+    delay(1);
   }
+  delay(1);
+  digitalWrite(35, LOW); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
+  digitalWrite(37, LOW);
+// clear screen
+tft.fillScreen(ILI9341_BLUE);
 startCarriageMotor();
 
 }
@@ -169,33 +175,40 @@ void startCarriageMotor()
  }
  void articulationSystemForward()
 {
+  tft.println("Articulation System");
+  tft.println("\n Moving Forward");
+  
+  digitalWrite(STEPDIR, LOW); //Pull direction pin low to move "forward"
+  digitalWrite(35, HIGH); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
+  digitalWrite(37, HIGH);
+  for(int x = 0; x < REVS; x++)  //Loop the forward stepping enough times for motion to be visible
+  {
+    digitalWrite(STEPPWM,HIGH); //Trigger one step forward
+    delay(1);
+    digitalWrite(STEPPWM,LOW); //Pull step pin low so it can be triggered again
+    delay(1);
+  }
+  delay(1);
+  digitalWrite(35, LOW); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
+  digitalWrite(37, LOW);
+  // reset LCD for reading output
   tft.fillScreen(ILI9341_BLUE);
   tft.setCursor(15,7);
-  myStepper.setSpeed(SRPM);
-  tft.println("Articulation System");
-  tft.println("\n Moving Forward..");
-  for(int i = 0; i < REVOLUTIONS; i++)
-  {
-  
-    myStepper.step(stepsPerRevolution);
-    delayMicroseconds(DELAYMCRO);
-  }
-  tft.fillScreen(ILI9341_BLUE);
-activateTorqueMotor();
+  // we have arrived at the bolt, now call torque to tighten
+  activateTorqueMotor();
 }
 void setup() {
   TCCR2B = TCCR2B & 0b11111000 | 0x01;  // set 31KHz PWM to prevent motor noise
 // torque pwm and dir pins.. just dont have #defined names. // TODO: make them #defined 
-  pinMode(10, OUTPUT);
-  pinMode(7, OUTPUT);
-// stepper motor pins.. just dont have #defined names. // TODO: make them #defined 
-  pinMode(35, OUTPUT);
-  pinMode(37, OUTPUT);
-  pinMode(39, OUTPUT);
-  pinMode(41, OUTPUT);
+  pinMode(TRQPWM, OUTPUT);
+  pinMode(TRQDIR, OUTPUT);
+// stepper motor pins for direction and pulse width modulation 
+  pinMode(STEPDIR, OUTPUT);
+  pinMode(STEPPWM, OUTPUT);;
+    // enables motors
 // carriage motor pins. Will make names more unique/obvious when I define other pins
-  pinMode(MotEnable, OUTPUT);
-  pinMode(MotDir, OUTPUT); 
+  pinMode(CARPWM, OUTPUT);
+  pinMode(CARDIR, OUTPUT); 
 
   Serial.begin(9600); //initialize serial communication to enable diagnostic output
 
@@ -223,6 +236,22 @@ void setup() {
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(4);
   tft.println("\n \n    START");
+  while(notStarted)
+  {
+      // Retrieve a point  
+  TSPoint p = ts.getPoint();
+  // When user presses anywhere on the screen, we will start
+  // We are pretending for now that the button is implemented but since its the only touch data we need
+  // this is fine for now 
+  if (p.z > MINPRESSURE && p.z < MAXPRESSURE)
+  {
+      tft.fillScreen(ILI9341_BLUE);
+      tft.setTextColor(ILI9341_WHITE);
+      tft.setTextSize(2);
+      notStarted = false;
+      activateTorqueMotor(); 
+   }
+ }
 
 
 
@@ -230,23 +259,7 @@ void setup() {
 
 void loop()
 {
-    // Retrieve a point  
-  TSPoint p = ts.getPoint();
-  // When user presses anywhere on the screen, we will start
-  // We are pretending for now that the button is implemented but since its the only touch data we need
-  // this is fine for now 
-  if (p.z > MINPRESSURE && p.z < MAXPRESSURE)
-  {   
-     
 
-     if(notStarted)
-     {
-      tft.setTextColor(ILI9341_WHITE);
-      tft.setTextSize(2);
-      notStarted = false;
-      activateTorqueMotor();  
-     }
-  }
 
 
 if (locationFound)
@@ -328,10 +341,7 @@ if (locationFound)
   // If stopForever is true then you know.. we wanna stop forever
   if(stopForever)
   {
-    tft.fillScreen(ILI9341_BLUE);
-    carriageMotor.setSpeed(0);
-    tft.println("COBOT done!");
-    
+    finish(); 
   }
 // only do this stuff if COBOT is not busy with other stuff
 if(keepLooking == true)
@@ -348,14 +358,14 @@ void pwmOut(int out)
   { 
    // tft.println("setting motor speed to: ");
   //  tft.println(out);   
-    analogWrite(MotEnable, out);         // Enabling motor enable pin to reach the desire angle
+    analogWrite(CARPWM, out);         // Enabling motor enable pin to reach the desire angle
     forward();                           // calling motor to move forward
   }
   else
   {
   //  tft.println("setting motor speed to: ");
 //tft.println(out); 
-    analogWrite(MotEnable, abs(out));                        
+    analogWrite(CARPWM, abs(out));                        
     reverse();                            // calling motor to move reverse
   }
   
@@ -406,21 +416,24 @@ if(abs((map(encoder0Position, 0, 2000, 0, MAPval))) == positions[next])
 
 void forward ()
 {
-  digitalWrite(MotDir, HIGH); 
+  digitalWrite(CARDIR, HIGH); 
   
 }
 
 void reverse ()
 {
-  digitalWrite(MotDir, LOW); 
+  digitalWrite(CARDIR, LOW); 
  
   
 }
 // I dont even use this plus it doesn't do what I want it to. It stays for now
 void finish ()
 {
-  tft.print("Stopping");
-  digitalWrite(MotDir, LOW); 
- digitalWrite(MotEnable, LOW); 
+
+  carriageMotor.setSpeed(0);
+  tft.setCursor(15,7);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.setTextSize(4);
+  tft.println("COBOT done!");
   
 }
