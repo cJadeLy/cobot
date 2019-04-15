@@ -37,8 +37,8 @@
 #define FRAME_H 50
 
 // Motor Pins
-#define STEPDIR              4       // Stepper Motor Direction pin
-#define STEPPWM              3       // Stepper Motor PWM signal
+#define STEPDIR              26       // Stepper Motor Direction pin
+#define STEPPWM              27       // Stepper Motor PWM signal
 #define CARPWM               9       // Carriage Motor PWM signal
 #define CARDIR               6       // Carriage Motor Direction pin
 #define TRQPWM               10      // Torque Motor PWM signal
