@@ -37,12 +37,12 @@
 #define FRAME_H 50
 
 // Motor Pins
-#define STEPDIR              26       // Stepper Motor Direction pin
-#define STEPPWM              27       // Stepper Motor PWM signal
+#define STEPDIR              26      // Stepper Motor Direction pin (D2 on PCB)
+#define STEPPWM              7       // Stepper Motor PWM signal
 #define CARPWM               9       // Carriage Motor PWM signal
 #define CARDIR               6       // Carriage Motor Direction pin
 #define TRQPWM               10      // Torque Motor PWM signal
-#define TRQDIR               7       // Torque Motor Direction pin
+#define TRQDIR               27      // Torque Motor Direction pin (D3 on PCB)
 
 
 #define ENCODER0PINA         20      // this pin needs to support interrupts
@@ -306,6 +306,8 @@ if (locationFound)
        {
         tft.println("Arrived at bolt:  ");
         tft.println(next);
+        delay(1000);
+        tft.fillScreen(ILI9341_BLUE);
         articulationSystemForward();
        }
     }
@@ -431,9 +433,11 @@ void finish ()
 {
 
   carriageMotor.setSpeed(0);
+  delay(250);
   tft.setCursor(15,7);
   tft.setTextColor(ILI9341_WHITE);
   tft.setTextSize(4);
   tft.println("COBOT done!");
+  tft.fillScreen(ILI9341_BLUE);
   
 }
