@@ -330,14 +330,16 @@ if (locationFound)
         tft.println(next);
         tft.println("cycles completed: ");
         tft.println(interruptsReceived,DEC);
-//        if(next == 1 || next == 6)
-//        {
-//          myPID.SetOutputLimits(-CLIMBSPEED, CLIMBSPEED);
-//        }
-//        else if(next == 4)
-//        {
-//          myPID.SetOutputLimits(-CRPM, CRPM);
-//        }
+        // if we are at these bolt locations the cobot is climbing and needs to be given enough power to get going
+        // being nice didnt work so the lower bound speed is gonna be 50
+        if(next == 1 || next == 6)
+        {
+          myPID.SetOutputLimits(50, 70); // why not.. GO COBOT GO!!
+        }
+        else if(next == 4)
+        {
+          myPID.SetOutputLimits(-CRPM, CRPM);
+        }
         delay(2000);        
         tft.fillScreen(ILI9341_BLUE);
         articulationSystemForward();
