@@ -335,10 +335,14 @@ if (locationFound)
         if(next == 1 || next == 6)
         {
           myPID.SetOutputLimits(50, 70); // why not.. GO COBOT GO!!
+          myPID.Compute();  // calculate new output maybe this is good maybe not 
+          tft.println("output for speed is maybe:  ");
+          tft.println(output);
         }
         else if(next == 4)
         {
           myPID.SetOutputLimits(-CRPM, CRPM);
+          myPID.Compute();  // calculate new output
         }
         delay(2000);        
         tft.fillScreen(ILI9341_BLUE);
@@ -392,17 +396,23 @@ void pwmOut(int out)
 {                               
   if (out > 0)
   { 
-   // tft.println("setting motor speed to: ");
-  //  tft.println(out);   
+    tft.println("setting motor speed to: ");
+    tft.println(out);   
     analogWrite(CARPWM, out);         // Enabling motor enable pin to reach the desire angle
+    tft.println("current bolt value is: ");
+    tft.println(next); 
     forward();                           // calling motor to move forward
+    tft.fillScreen(ILI9341_BLUE);
   }
   else
   {
-  //  tft.println("setting motor speed to: ");
-//tft.println(out); 
+    tft.println("setting motor speed to: ");
+    tft.println(out); 
+    tft.println("current bolt value is: ");
+    tft.println(next); 
     analogWrite(CARPWM, abs(out));                        
     reverse();                            // calling motor to move reverse
+    tft.fillScreen(ILI9341_BLUE);
   }
   
   
