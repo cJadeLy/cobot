@@ -49,10 +49,11 @@
 #define ENCODER0PINB         17      // this pin does not need to support interrupts
 #define CLOCKWISE            1       // direction constant
 #define COUNTER_CLOCKWISE    2       // direction constant
-#define CRPM                 35      // for carriage motor speed
+#define CRPM                 55      // for carriage motor speed
+#define CLIMBSPEED           50      // give cobot a boost when climbing up 
 #define TRPM                 30      // for torque motor speed
 #define DELAYMILLI           250     // set millisecond delay (used for torque and carriage)
-#define DELAYMCRO            50      // set microsecond delay (used for stepper)
+#define DELAYMCRO            300      // set microsecond delay (used for stepper)
 #define MAPval               90      // forgiving precision for encoder that maps 0 - 2000 to 0 - MAPval
 #define CPR                  2000    // Encoder Cycles per revolution.
 #define STOP                 0       
@@ -60,23 +61,34 @@
 // next is a control variable that is used as a bounds check for the position array
 short next = 0; 
 // scale each bolt location to allow a threshold greater than one degree precision 
-int bolt1 = map(1000,0, 2000, 0, MAPval);
-int bolt2 = map(1500,0, 2000, 0, MAPval);
-int bolt3 = map(500,0, 2000, 0, MAPval);
-int bolt4 = map(750,0, 2000, 0, MAPval);
-int bolt5 = map(1750,0, 2000, 0, MAPval);
-int bolt6 = map(250,0, 2000, 0, MAPval);
-int bolt7 = map(1250,0, 2000, 0, MAPval);
+// these values relate to the remainer cycles actually expected
+int bolt1 = map(1632,0, 2000, 0, MAPval); // 3632
+int bolt2 = map(1432,0, 2000, 0, MAPval); // 5432
+int bolt3 = map(1065,0, 2000, 0, MAPval); // 9065
+int bolt4 = map(697,0, 2000, 0, MAPval);  // 129697
+int bolt5 = map(888,0, 2000, 0, MAPval);  // 16888
+int bolt6 = map(688,0, 2000, 0, MAPval);  // 18688
+int bolt7 = map(321,0, 2000, 0, MAPval);  // 22321
+//// I have a different idea...that I might try next..
+//int bolt1 = map(1000,0, 2000, 0, MAPval);
+//int bolt2 = map(1500,0, 2000, 0, MAPval);
+//int bolt3 = map(500,0, 2000, 0, MAPval);
+//int bolt4 = map(750,0, 2000, 0, MAPval);
+//int bolt5 = map(1750,0, 2000, 0, MAPval);
+//int bolt6 = map(250,0, 2000, 0, MAPval);
+//int bolt7 = map(1250,0, 2000, 0, MAPval);
 
 // stuff those values into this array to iterate over
 int positions[8] = {bolt1,bolt2, bolt3, bolt4, bolt5, bolt6, bolt7, 0};
 
 // when all indices == 2 the COBOT has completed 3 passes. As of 4/04/19 this is unused but it shall be implemented in the next revision
 int pass[8] = {0, 0, 0, 0, 0, 0, 0, 1};
+int reqRevolutions[8]= {1, 2, 4, 6, 8, 9, 11, 0};
 int REVS = 1600;      
 // variables modified by interrupt handler must be declared as volatile
 volatile long encoder0Position = 0;
 volatile long interruptsReceived = 0;
+volatile int revolutions = 0;
  
 // track last position so we know whether it's worth printing new output, used when debugging
 int previousPosition = 0;
@@ -111,9 +123,9 @@ PID myPID(&input, &output, &setpoint, kp, ki, kd, DIRECT);
 
 // Configure the motor driver.
 // Create Instance of CytronMD library for torque motor
-CytronMD torqueMotor(PWM_DIR, 10, 7);  // PWM = Pin 10, DIR = Pin 7.
+CytronMD torqueMotor(PWM_DIR, TRQPWM, TRQDIR);  // PWM = Pin 10, DIR = Pin 7.
 // Create Instance of CytronMD library for carriage motor
-CytronMD carriageMotor(PWM_DIR, 9, 6);  // PWM = Pin 9, DIR = Pin 6.
+CytronMD carriageMotor(PWM_DIR, CARPWM, CARDIR);  // PWM = Pin 9, DIR = Pin 6.
 
 // draw and color frame for button
 void drawFrame()
@@ -128,7 +140,7 @@ void activateTorqueMotor()
  
 
    tft.println("Torque...");
-   torqueMotor.setSpeed(TRPM);
+   torqueMotor.setSpeed(50);
    delay(1000);
    torqueMotor.setSpeed(STOP);
    delay(DELAYMILLI);
@@ -147,12 +159,15 @@ void articulationSystemBackward()
   digitalWrite(STEPDIR, HIGH); //Pull direction pin low to move "backward"
   digitalWrite(35, HIGH); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
   digitalWrite(37, HIGH);
-  for(int x = 0; x < REVS; x++)  //Loop the forward stepping enough times for motion to be visible
+  for(int i = 0; i < 15; i++)
   {
-    digitalWrite(STEPPWM,HIGH); //Trigger one step forward
-    delay(1);
-    digitalWrite(STEPPWM,LOW); //Pull step pin low so it can be triggered again
-    delay(1);
+    for(int x = 0; x < REVS; x++)  //Loop the forward stepping enough times for motion to be visible
+    {
+      digitalWrite(STEPPWM,HIGH); //Trigger one step forward
+      delayMicroseconds(DELAYMCRO);
+      digitalWrite(STEPPWM,LOW); //Pull step pin low so it can be triggered again
+      delayMicroseconds(DELAYMCRO);
+     }
   }
   delay(1);
   digitalWrite(35, LOW); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
@@ -177,20 +192,27 @@ void startCarriageMotor()
 {
   tft.println("Articulation System");
   tft.println("\n Moving Forward");
+  torqueMotor.setSpeed(TRPM);
+  delay(1);
   
   digitalWrite(STEPDIR, LOW); //Pull direction pin low to move "forward"
   digitalWrite(35, HIGH); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
   digitalWrite(37, HIGH);
-  for(int x = 0; x < REVS; x++)  //Loop the forward stepping enough times for motion to be visible
-  {
-    digitalWrite(STEPPWM,HIGH); //Trigger one step forward
-    delay(1);
-    digitalWrite(STEPPWM,LOW); //Pull step pin low so it can be triggered again
-    delay(1);
+  for(int i = 0; i < 15; i++)
+  { 
+    for(int x = 0; x < REVS; x++)  //Loop the forward stepping enough times for motion to be visible
+    {
+      digitalWrite(STEPPWM,HIGH); //Trigger one step forward
+      delayMicroseconds(DELAYMCRO);
+      digitalWrite(STEPPWM,LOW); //Pull step pin low so it can be triggered again
+      delayMicroseconds(DELAYMCRO);
+    }
   }
   delay(1);
   digitalWrite(35, LOW); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
   digitalWrite(37, LOW);
+  torqueMotor.setSpeed(STOP);
+  delay(1);
   // reset LCD for reading output
   tft.fillScreen(ILI9341_BLUE);
   tft.setCursor(15,7);
@@ -295,7 +317,7 @@ if (locationFound)
        }
        // This code will be used to test on the floor with the chain and i dont want the COBOT to eat my hand so I am letting it visit each bolt one time
        // and it should visit each bolt after 5,441 cycles but I dont trust the cobot so im making sure this dude stops. He is guilty until proven innocent
-       if(interruptsReceived > 5500)
+       if(interruptsReceived > 25000)
        {
           stopForever = true;
        }
@@ -306,7 +328,17 @@ if (locationFound)
        {
         tft.println("Arrived at bolt:  ");
         tft.println(next);
-        delay(1000);
+        tft.println("cycles completed: ");
+        tft.println(interruptsReceived,DEC);
+//        if(next == 1 || next == 6)
+//        {
+//          myPID.SetOutputLimits(-CLIMBSPEED, CLIMBSPEED);
+//        }
+//        else if(next == 4)
+//        {
+//          myPID.SetOutputLimits(-CRPM, CRPM);
+//        }
+        delay(2000);        
         tft.fillScreen(ILI9341_BLUE);
         articulationSystemForward();
        }
@@ -375,12 +407,6 @@ void pwmOut(int out)
 
 }
 
-
- 
- 
-
-
-
 void updateEncoder()
 {
 // read both inputs
@@ -399,12 +425,17 @@ void updateEncoder()
     encoder0Position++;
     currentDirection = CLOCKWISE;
   }
- 
+  
+  if(abs(encoder0Position) == 2000)
+  {
+    revolutions++;
+  }
+
   // track 0 to 1999
   encoder0Position = encoder0Position % CPR;
 
-// changing positions[next] to setspeed MAY improve accuracy. but I gotta think more. 
-if(abs((map(encoder0Position, 0, 2000, 0, MAPval))) == positions[next])
+// map encoder value to location with forgiving threshold and make sure we have completed enough revolutions for this bolt
+if((abs((map(encoder0Position, 0, 1999, 0, MAPval))) == positions[next]) && (revolutions == reqRevolutions[next]) )
  {
   locationFound = true;
   // This stays
@@ -425,10 +456,7 @@ void forward ()
 void reverse ()
 {
   digitalWrite(CARDIR, LOW); 
- 
-  
 }
-// I dont even use this plus it doesn't do what I want it to. It stays for now
 void finish ()
 {
 
@@ -436,8 +464,10 @@ void finish ()
   delay(250);
   tft.setCursor(15,7);
   tft.setTextColor(ILI9341_WHITE);
-  tft.setTextSize(4);
+  tft.setTextSize(2);
   tft.println("COBOT done!");
-  tft.fillScreen(ILI9341_BLUE);
+  tft.println("cycles completed: ");
+  tft.println(interruptsReceived,DEC);
+
   
 }
