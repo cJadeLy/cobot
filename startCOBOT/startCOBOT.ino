@@ -53,7 +53,7 @@
 #define CLIMBSPEED           50      // give cobot a boost when climbing up 
 #define TRPM                 30      // for torque motor speed
 #define DELAYMILLI           250     // set millisecond delay (used for torque and carriage)
-#define DELAYMCRO            300      // set microsecond delay (used for stepper)
+#define DELAYMCRO            200      // set microsecond delay (used for stepper)
 #define MAPval               90      // forgiving precision for encoder that maps 0 - 2000 to 0 - MAPval
 #define CPR                  2000    // Encoder Cycles per revolution.
 #define STOP                 0       
@@ -63,12 +63,12 @@ short next = 0;
 // scale each bolt location to allow a threshold greater than one degree precision 
 // these values relate to the remainer cycles actually expected
 int bolt1 = map(1632,0, 2000, 0, MAPval); // 3632
-int bolt2 = map(1432,0, 2000, 0, MAPval); // 5432
-int bolt3 = map(1065,0, 2000, 0, MAPval); // 9065
-int bolt4 = map(697,0, 2000, 0, MAPval);  // 129697
-int bolt5 = map(888,0, 2000, 0, MAPval);  // 16888
-int bolt6 = map(688,0, 2000, 0, MAPval);  // 18688
-int bolt7 = map(321,0, 2000, 0, MAPval);  // 22321
+int bolt2 = map(1752,0, 2000, 0, MAPval); // 5432 -> 5752
+int bolt3 = map(1350,0, 2000, 0, MAPval);  // 9065 - >9265
+int bolt4 = map(1800,0, 2000, 0, MAPval);  // 12697 - >13800
+int bolt5 = map(1088,0, 2000, 0, MAPval);  // 16888 -> 17088
+int bolt6 = map(888,0, 2000, 0, MAPval);  // 18688 -> 19688
+int bolt7 = map(521,0, 2000, 0, MAPval);  // 22321 -> 23321
 //// I have a different idea...that I might try next..
 //int bolt1 = map(1000,0, 2000, 0, MAPval);
 //int bolt2 = map(1500,0, 2000, 0, MAPval);
@@ -185,8 +185,9 @@ void startCarriageMotor()
 //  
 //  carriageMotor.setSpeed(CRPM);
 //  delay(DELAYMILLI);
-//  tft.println("Leaving.");
+ 
   keepLooking = true;
+  tft.println("I think I can..");
  }
  void articulationSystemForward()
 {
@@ -257,7 +258,7 @@ void setup() {
   drawFrame();
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(4);
-  tft.println("\n \n    START");
+  tft.println("\n \n    START!");
   while(notStarted)
   {
       // Retrieve a point  
@@ -317,7 +318,7 @@ if (locationFound)
        }
        // This code will be used to test on the floor with the chain and i dont want the COBOT to eat my hand so I am letting it visit each bolt one time
        // and it should visit each bolt after 5,441 cycles but I dont trust the cobot so im making sure this dude stops. He is guilty until proven innocent
-       if(interruptsReceived > 25000)
+       if(interruptsReceived > 30000)
        {
           stopForever = true;
        }
@@ -330,21 +331,26 @@ if (locationFound)
         tft.println(next);
         tft.println("cycles completed: ");
         tft.println(interruptsReceived,DEC);
+       // delay(2000); // lemme see the output idk if this broke something i dont see how but guuhh
+        
         // if we are at these bolt locations the cobot is climbing and needs to be given enough power to get going
         // being nice didnt work so the lower bound speed is gonna be 50
         if(next == 1 || next == 6)
-        {
-          myPID.SetOutputLimits(50, 70); // why not.. GO COBOT GO!!
+        {        
+//          tft.fillScreen(ILI9341_BLUE);
+//          tft.setCursor(15,7);
+          myPID.SetOutputLimits(55, 80); // why not.. GO COBOT GO!!
           myPID.Compute();  // calculate new output maybe this is good maybe not 
-          tft.println("output for speed is maybe:  ");
-          tft.println(output);
+//          tft.println("output for speed is maybe:  ");
+//          tft.println(output);
+//          delay(2000); // lemme see this output
         }
         else if(next == 4)
         {
           myPID.SetOutputLimits(-CRPM, CRPM);
           myPID.Compute();  // calculate new output
         }
-        delay(2000);        
+        delay(1500);        
         tft.fillScreen(ILI9341_BLUE);
         articulationSystemForward();
        }
@@ -396,23 +402,23 @@ void pwmOut(int out)
 {                               
   if (out > 0)
   { 
-    tft.println("setting motor speed to: ");
-    tft.println(out);   
+//    tft.println("setting motor speed to: ");
+//    tft.println(out);   
     analogWrite(CARPWM, out);         // Enabling motor enable pin to reach the desire angle
-    tft.println("current bolt value is: ");
-    tft.println(next); 
+//    tft.println("current bolt value is: ");
+//    tft.println(next); 
     forward();                           // calling motor to move forward
-    tft.fillScreen(ILI9341_BLUE);
+//    tft.fillScreen(ILI9341_BLUE);
   }
   else
   {
-    tft.println("setting motor speed to: ");
-    tft.println(out); 
-    tft.println("current bolt value is: ");
-    tft.println(next); 
+//    tft.println("setting motor speed to: ");
+//    tft.println(out); 
+//    tft.println("current bolt value is: ");
+//    tft.println(next); 
     analogWrite(CARPWM, abs(out));                        
     reverse();                            // calling motor to move reverse
-    tft.fillScreen(ILI9341_BLUE);
+//    tft.fillScreen(ILI9341_BLUE);
   }
   
   
