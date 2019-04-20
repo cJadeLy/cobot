@@ -63,20 +63,12 @@ short next = 0;
 // scale each bolt location to allow a threshold greater than one degree precision 
 // these values relate to the remainer cycles actually expected
 int bolt1 = map(1632,0, 2000, 0, MAPval); // 3632
-int bolt2 = map(1752,0, 2000, 0, MAPval); // 5432 -> 5752
-int bolt3 = map(1350,0, 2000, 0, MAPval);  // 9065 - >9265
-int bolt4 = map(1800,0, 2000, 0, MAPval);  // 12697 - >13800
-int bolt5 = map(1088,0, 2000, 0, MAPval);  // 16888 -> 17088
-int bolt6 = map(888,0, 2000, 0, MAPval);  // 18688 -> 19688
-int bolt7 = map(521,0, 2000, 0, MAPval);  // 22321 -> 23321
-//// I have a different idea...that I might try next..
-//int bolt1 = map(1000,0, 2000, 0, MAPval);
-//int bolt2 = map(1500,0, 2000, 0, MAPval);
-//int bolt3 = map(500,0, 2000, 0, MAPval);
-//int bolt4 = map(750,0, 2000, 0, MAPval);
-//int bolt5 = map(1750,0, 2000, 0, MAPval);
-//int bolt6 = map(250,0, 2000, 0, MAPval);
-//int bolt7 = map(1250,0, 2000, 0, MAPval);
+int bolt2 = map(1422,0, 2000, 0, MAPval); // 5432
+int bolt3 = map(1055,0, 2000, 0, MAPval); // 9065
+int bolt4 = map(1697,0, 2000, 0, MAPval);  // 12697
+int bolt5 = map(888,0, 2000, 0, MAPval);  // 16888
+int bolt6 = map(898,0, 2000, 0, MAPval);  // 18898
+int bolt7 = map(321,0, 2000, 0, MAPval);  // 22321
 
 // stuff those values into this array to iterate over
 int positions[8] = {bolt1,bolt2, bolt3, bolt4, bolt5, bolt6, bolt7, 0};
@@ -159,7 +151,7 @@ void articulationSystemBackward()
   digitalWrite(STEPDIR, HIGH); //Pull direction pin low to move "backward"
   digitalWrite(35, HIGH); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
   digitalWrite(37, HIGH);
-  for(int i = 0; i < 15; i++)
+  for(int i = 0; i < 10; i++)
   {
     for(int x = 0; x < REVS; x++)  //Loop the forward stepping enough times for motion to be visible
     {
@@ -199,7 +191,7 @@ void startCarriageMotor()
   digitalWrite(STEPDIR, LOW); //Pull direction pin low to move "forward"
   digitalWrite(35, HIGH); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
   digitalWrite(37, HIGH);
-  for(int i = 0; i < 15; i++)
+  for(int i = 0; i < 10; i++)
   { 
     for(int x = 0; x < REVS; x++)  //Loop the forward stepping enough times for motion to be visible
     {
@@ -335,7 +327,7 @@ if (locationFound)
         
         // if we are at these bolt locations the cobot is climbing and needs to be given enough power to get going
         // being nice didnt work so the lower bound speed is gonna be 50
-        if(next == 1 || next == 6)
+        if(next == 1 || next == 5)
         {        
 //          tft.fillScreen(ILI9341_BLUE);
 //          tft.setCursor(15,7);
